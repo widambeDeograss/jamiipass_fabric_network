@@ -1,0 +1,137 @@
+{
+	"name": "first-network",
+	"version": "1.0.0",
+	"license": "Apache-2.0",
+	"client": {
+		"tlsEnable": true,
+		"adminCredential": {
+			"id": "exploreradmin",
+			"password": "exploreradminpw"
+		},
+		"enableAuthentication": true,
+		"organization": "NIDAMSP",
+		"connection": {
+			"timeout": {
+				"peer": {
+					"endorser": "300"
+				},
+				"orderer": "300"
+			}
+		}
+	},
+	"channels": {
+		"mychannel": {
+			"peers": {
+				"peer0.nida.example.com": {},
+				"peer0.dit.example.com": {},
+				"peer0.nhif.example.com": {},
+				"peer0.rita.example.com": {},
+				"peer0.tra.example.com": {}
+			},
+			"connection": {
+				"timeout": {
+					"peer": {
+						"endorser": "6000",
+						"eventHub": "6000",
+						"eventReg": "6000"
+					}
+				}
+			}
+		}
+	},
+	"organizations": {
+		"DITOrg": {
+			"mspid": "DITMSP",
+			"adminPrivateKey": {
+				"path": "/etc/data/peerOrganizations/dit.example.com/users/Admin@dit.example.com/msp/keystore/7c35a5233e7483a899f61a1cac137f9bd2e3e2f12bcfc12b04afdfc7ba1af5bd_sk"
+			},
+			"peers": [
+				"peer0.dit.example.com"
+			],
+			"signedCert": {
+				"path": "/etc/data/peerOrganizations/dit.example.com/users/Admin@peer0.dit.example.com/msp/signcerts/cert.pem"
+			}
+		},
+		"NHIFOrg": {
+			"mspid": "NHIFMSP",
+			"adminPrivateKey": {
+				"path": "/etc/data/peerOrganizations/nhif.example.com/users/Admin@nhif.example.com/msp/keystore/94a60b7f85b056fffd02d33894a71629c03d63355195a33ca39d4a23592e8740_sk"
+			},
+			"peers": [
+				"peer0.nhif.example.com"
+			],
+			"signedCert": {
+				"path": "/etc/data/peerOrganizations/nhif.example.com/users/Admin@peer0.nhif.example.com/msp/signcerts/cert.pem"
+			}
+		},
+		"NIDAOrg": {
+			"mspid": "NIDAMSP",
+			"adminPrivateKey": {
+				"path": "/etc/data/peerOrganizations/nida.example.com/users/Admin@nida.example.com/msp/keystore/f7c891e7e47d98a80498d5b530c2ae90144d2b00e2b377e45f7ed6a22167f30d_sk"
+			},
+			"peers": [
+				"peer0.nida.example.com"
+			],
+			"signedCert": {
+				"path": "/etc/data/peerOrganizations/nida.example.com/users/Admin@peer0.nida.example.com/msp/signcerts/cert.pem"
+			}
+		},
+		"RITAOrg": {
+			"mspid": "RITAMSP",
+			"adminPrivateKey": {
+				"path": "/etc/data/peerOrganizations/rita.example.com/users/Admin@rita.example.com/msp/keystore/a39f66f2a4b71bdfc97c6d4fd5233c4ea73e08692d82b3e349af00ba7b4a633d_sk"
+			},
+			"peers": [
+				"peer0.rita.example.com"
+			],
+			"signedCert": {
+				"path": "/etc/data/peerOrganizations/rita.example.com/users/Admin@peer0.rita.example.com/msp/signcerts/cert.pem"
+			}
+		},
+		"TRAOrg": {
+			"mspid": "TRAMSP",
+			"adminPrivateKey": {
+				"path": "/etc/data/peerOrganizations/tra.example.com/users/Admin@tra.example.com/msp/879bcd03793b46584056f66118c3e720e0e63d92d6140b685b8ae13e3ff93f55_sk"
+			},
+			"peers": [
+				"peer0.tra.example.com"
+			],
+			"signedCert": {
+				"path": "/etc/data/peerOrganizations/tra.example.com/users/Admin@peer0.tra.example.com/msp/signcerts/cert.pem"
+			}
+		}
+
+	},
+	"peers": {
+		"peer0.nida.example.com": {
+			"tlsCACerts": {
+				"path": "/etc/data/peerOrganizations/nida.example.com/peers/peer0.nida.example.com/tls/ca.crt"
+			},
+			"url": "ggrpcs://localhost:7051"
+		},
+        "peer0.dit.example.com": {
+			"tlsCACerts": {
+				"path": "/etc/data/peerOrganizations/dit.example.com/peers/peer0.dit.example.com/tls/ca.crt"
+			},
+			"url": "ggrpcs://localhost:9051"
+		},
+		"peer0.nhif.example.com": {
+			"tlsCACerts": {
+				"path": "/etc/data/peerOrganizations/nhif.example.com/peers/peer0.nhif.example.com/tls/ca.crt"
+			},
+			"url": "ggrpcs://localhost:11051"
+		},
+		"peer0.rita.example.com": {
+			"tlsCACerts": {
+				"path": "/etc/data/peerOrganizations/rita.example.com/peers/peer0.rita.example.comtls/ca.crt"
+			},
+			"url": "ggrpcs://localhost:13051"
+		},
+		"peer0.tra.example.com": {
+			"tlsCACerts": {
+				"path": "/etc/data/peerOrganizations/tra.example.com/peers/peer0.tra.example.com/tls/ca.crt"
+			},
+			"url": "ggrpcs://localhost:15051"
+		}
+	}
+}
