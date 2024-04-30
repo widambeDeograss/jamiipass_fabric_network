@@ -63,20 +63,15 @@ const invokeTransaction = async (channelName, chaincodeName, fcn, args, username
         let message;
 
         switch (fcn) {
-            case "queryIdentities":
+            case "CreateIdentity":
                 console.log("9888888888888888888888==============================");
                 result = await contract.submitTransaction(fcn, ...args);
                 console.log(result);
                 result = {txid: result, success:true}
                 break;
-            case "UpdateCarOwner":
+            case "UpdateIdentityByTransactionID":
                 console.log("=============")
                 result = await contract.submitTransaction('SmartContract:'+fcn, args[0], args[1]);
-                result = {txid: result.toString()}
-                break;
-            case "CreateDocument":
-                result = await contract.submitTransaction('DocumentContract:'+fcn, args[0]);
-                console.log(result.toString())
                 result = {txid: result.toString()}
                 break;
             default:

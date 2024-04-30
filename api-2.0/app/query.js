@@ -45,14 +45,29 @@ const query = async (channelName, chaincodeName, args, fcn, username, org_name) 
         let result;
 
         switch (fcn) {
+            case "GetIdentitiesByOrganization":
+                console.log("=============")
+                result = await contract.evaluateTransaction(fcn, args[0]);
+                break;
+            case "GetIdentityByUserID":
+                console.log("=============")
+                result = await contract.evaluateTransaction(fcn, args[0]);
+                break;
+            case "GetIdentityByTransactionID":
+                console.log("=============")
+                result = await contract.evaluateTransaction(fcn, args[0]);
+                break;
+            case "GetIdentitiesByTransactionIDs":
+                console.log("=============")
+                result = await contract.evaluateTransaction(fcn, args[0]);
+                break;
+            case "DeleteIdentityByTransactionID":
+                console.log("=============")
+                result = await contract.evaluateTransaction(fcn, args[0]);
+                break;
             case "DeactivateExpiredIdentities":
                 console.log("=============")
                 result = await contract.evaluateTransaction(fcn);
-                break;
-            case "GetHistoryForAsset":
-            case "GetCarById":
-                console.log("=============")
-                result = await contract.evaluateTransaction(fcn, args[0]);
                 break;
             default:
                 break;

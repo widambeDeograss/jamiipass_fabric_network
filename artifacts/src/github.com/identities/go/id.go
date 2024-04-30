@@ -68,24 +68,19 @@ func (s *SmartContract) GetIdentitiesByOrganization(ctx contractapi.TransactionC
     return s.queryIdentities(ctx, query)
 }
 
-// GetIdentityByUserID returns the identity for a given user ID.
-func (s *SmartContract) GetIdentityByUserID(ctx contractapi.TransactionContextInterface, userID string) (*Identity, error) {
-    identityJSON, err := ctx.GetStub().GetState(userID)
-    if err != nil {
-        return nil, fmt.Errorf("failed to read state: %s", err)
-    }
-    if identityJSON == nil {
-        return nil, fmt.Errorf("identity not found for user ID %s", userID)
-    }
+// GetIdentitiesByUserID returns the identities for a given user ID.
+func (s *SmartContract) GetIdentitiesByUserID(ctx contractapi.TransactionContextInterface, userID string) ([]*Identity, error) {
+    // Construct a query selector to match user ID
+    query := fmt.Sprintf(`{
+        "selector": {
+            "userID": "%s"
+        }
+    }`, userID)
 
-    var identity Identity
-    err = json.Unmarshal(identityJSON, &identity)
-    if err != nil {
-        return nil, fmt.Errorf("failed to unmarshal identity: %s", err)
-    }
-
-    return &identity, nil
+    // Execute the query to retrieve the matching identities
+    return s.queryIdentities(ctx, query)
 }
+
 
 // queryIdentities executes the provided query and returns the resulting identities.
 func (s *SmartContract) queryIdentities(ctx contractapi.TransactionContextInterface, query string) ([]*Identity, error) {
@@ -133,6 +128,21 @@ func (s *SmartContract) GetIdentityByTransactionID(ctx contractapi.TransactionCo
 
     // We assume there's only one identity per transaction ID
     return identities[0], nil
+}
+
+// GetIdentitiesByTransactionIDs returns the identities for given transaction IDs.
+func (s *SmartContract) GetIdentitiesByTransactionIDs(ctx contractapi.TransactionContextInterface, txIDs []string) ([]*Identity, error) {
+    // Construct a query selector to match transaction IDs
+    query := fmt.Sprintf(`{
+        "selector": {
+            "transactionId": {
+                "$in": %s
+            }
+        }
+    }`, toJSON(txIDs))
+
+    // Execute the query to retrieve the matching identities
+    return s.queryIdentities(ctx, query)
 }
 
 // GetIdentitiesByTransactionIDs returns the identities for given transaction IDs.
