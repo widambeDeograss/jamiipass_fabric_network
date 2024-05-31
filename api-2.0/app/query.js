@@ -41,21 +41,23 @@ const query = async (channelName, chaincodeName, args, fcn, username, org_name) 
 
         // Get the contract from the network.
         const contract = network.getContract(chaincodeName);
-        let arg = "NIDA"
+        
         let result;
 
         switch (fcn) {
             case "GetIdentitiesByOrganization":
-                console.log("=============")
-                result = await contract.evaluateTransaction(fcn, args[0]);
+                const arg = org_name === "NIDAOrg"? "NIDA":org_name === "DITOrg"? ["DIT"]:org_name === "NHIFOrg"? ["NHIF"]:org_name === "TRAOrg"?["TRA"]:"RITA"
+                console.log("=============", `${arg}`)
+                result = await contract.evaluateTransaction(fcn, `${arg}`);
                 break;
             case "GetIdentityByUserID":
                 console.log("=============")
-                result = await contract.evaluateTransaction(fcn, args[0]);
+                result = await contract.evaluateTransaction(fcn, ["5522hdgghdhdghd5ggg52"]);
                 break;
             case "GetIdentityByTransactionID":
-                console.log("=============")
-                result = await contract.evaluateTransaction(fcn, args[0]);
+                console.log("=============GetIdentityByTransactionID")
+                console.log(args[0]);
+                result = await contract.evaluateTransaction(fcn, args);
                 break;
             case "GetIdentitiesByTransactionIDs":
                 console.log("=============")
@@ -63,7 +65,7 @@ const query = async (channelName, chaincodeName, args, fcn, username, org_name) 
                 break;
             case "DeleteIdentityByTransactionID":
                 console.log("=============")
-                result = await contract.evaluateTransaction(fcn, args[0]);
+                result = await contract.evaluateTransaction(fcn, ["23D56"]);
                 break;
             case "DeactivateExpiredIdentities":
                 console.log("=============")

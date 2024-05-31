@@ -131,7 +131,7 @@ func (s *SmartContract) GetIdentityByTransactionID(ctx contractapi.TransactionCo
 }
 
 // GetIdentitiesByTransactionIDs returns the identities for given transaction IDs.
-func (s *SmartContract) GetIdentitiesByTransactionIDs(ctx contractapi.TransactionContextInterface, txIDs []string) ([]*Identity, error) {
+func (s *SmartContract) GetIdentitiesByTransactionIDss(ctx contractapi.TransactionContextInterface, txIDs []string) ([]*Identity, error) {
     // Construct a query selector to match transaction IDs
     query := fmt.Sprintf(`{
         "selector": {
@@ -147,6 +147,11 @@ func (s *SmartContract) GetIdentitiesByTransactionIDs(ctx contractapi.Transactio
 
 // GetIdentitiesByTransactionIDs returns the identities for given transaction IDs.
 func (s *SmartContract) GetIdentitiesByTransactionIDs(ctx contractapi.TransactionContextInterface, txIDs []string) ([]*Identity, error) {
+    txIDsJSON, err := json.Marshal(txIDs)
+    if err != nil {
+        return nil, fmt.Errorf("failed to marshal transaction IDs to JSON: %s", err)
+    }
+
     // Construct a query selector to match transaction IDs
     query := fmt.Sprintf(`{
         "selector": {
@@ -154,7 +159,7 @@ func (s *SmartContract) GetIdentitiesByTransactionIDs(ctx contractapi.Transactio
                 "$in": %s
             }
         }
-    }`, toJSON(txIDs))
+    }`, string(txIDsJSON))
 
     // Execute the query to retrieve the matching identities
     return s.queryIdentities(ctx, query)

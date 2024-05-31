@@ -44,7 +44,7 @@ const fileStorage = multer.diskStorage({
 
 app.options('*', cors());
 app.use(cors());
-app.use(bodyParser.json());
+app.use(bodyParser.json({limit:'50mb'}));
 app.use(bodyParser.urlencoded({
     extended: false
 }));
@@ -265,14 +265,15 @@ app.post('/channels/:channelName/chaincodes/:chaincodeName', async function (req
 });
 
 app.get('/channels/:channelName/chaincodes/:chaincodeName', async function (req, res) {
+    console.log("-------------------------------------------------------------");
     try {
         logger.debug('==================== QUERY BY CHAINCODE ==================');
 
         var channelName = req.params.channelName;
         var chaincodeName = req.params.chaincodeName;
         console.log(`chaincode name is :${chaincodeName}`)
-        let args = [["23D56", "13"]];
-        let fcn = "DeactivateExpiredIdentities";
+        let args = req.query.args;
+        let fcn = req.query.fcn;
         // let peer = req.query.peer;
         console.log(fcn, "66666666666666========================================================================");
         let peer = req.query.peer;

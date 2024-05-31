@@ -16,8 +16,8 @@ const register_controler =  async (req, res, next) => {
     const dob = req.body.dob
     const gender = req.body.gender
     const nida_no = req.body.nida_no
-    const image = req.files[0]
-    const  profile = image.path
+    // const image = req.files[0]
+    const  profile = ""
     const  role = req.body.role
     const email_verified = false
 
@@ -25,7 +25,7 @@ const register_controler =  async (req, res, next) => {
         hashed => {
             console.log(hashed);
            pool.query('INSERT INTO users (first_name, middle_name, last_name, nida_no, email, phone, email_verified, dob, password, profile, gender, role) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *',
-           [first_name, middle_name, last_name, nida_no, email, phone, email_verified, dob, user_password, profile,gender, role])
+           [first_name, middle_name, last_name, nida_no, email, phone, email_verified, dob, hashed, profile,gender, role])
                         .then(user => {
                             res.status(200).json({
                                 message:"user created succesfully",
@@ -53,17 +53,18 @@ const login_controler = (req, res, next) => {
     const user_password = req.body.user_password
 
     pool.query('SELECT * FROM users WHERE phone = $1', [user_phone])
+ 
     .then(user => {
         if (user.rows.length === 0) {
             res.status(401).json({data:"the was no match for the email"}) 
         }else{
-            bcrypt.compare(user_password, user.rows[0].user_password)
+            bcrypt.compare(user_password, user.rows[0].password)
             .then( async doMatch => {
                if (doMatch) {
                 const otp = Math.floor(Math.random() * 10000);
-
-                const ress = await sendMail('JAMIIPASS LOGIN ONE TIME PASSWORD', `TO login enter this otp: ${otp}`, org.rows[0].email);
-                if (ress) {
+                console.log("------------", otp);
+                // const ress = await sendMail('JAMIIPASS LOGIN ONE TIME PASSWORD', `TO login enter this otp: ${otp}`, org.rows[0].email);
+                if (true) {
                     await pool.query('INSERT INTO user_otps (user_id, otp) VALUES($1,$2) RETURNING *',
                     [user.rows[0].user_id, otp])
                     .then(dat => {
@@ -113,12 +114,16 @@ const user_verify_email = async (req, res, next) => {
 }
 
 const verfy_otp =async (req, res, next) => {
+    console.log("-------------------------------------------------------------");
     const user_id  = req.body.user_id;
     const otp = req.body.otp
+
+   
     
     await pool.query('SELECT * FROM user_otps WHERE user_id=$1', [user_id])
     .then(
     async user_otp => {
+        console.log("==========", user_otp);
      if (user_otp.rows[0].otp === otp) {
          await pool.query('SELECT * FROM users WHERE user_id=$1', [user_id])
          .then(
@@ -129,7 +134,8 @@ const verfy_otp =async (req, res, next) => {
                   res.cookie("refresh_token", tokens.refeshToken, {httpOnly:true, sameSite:'none', secure:true});
                   res.status(200).json({
                       token:tokens.accessToken,
-                      user:user.rows[0]
+                      user:user.rows[0],
+                      success:true,
                   })
              }
          )
@@ -145,7 +151,7 @@ const verfy_otp =async (req, res, next) => {
      res.status(500).json({error:"server error"})
     })
     .finally(
-     await pool.query('DELETE FROM org_otps WHERE org_id=$1', [org_id])
+     await pool.query('DELETE FROM user_otps WHERE user_id=$1', [user_id])
     )
  
  }
@@ -183,4 +189,144 @@ const logout_controler = (req, res, next) => {
         res.status(401).json({error:error.message})
     }
 }
-module.exports = {verfy_otp,user_verify_email,register_controler, login_controler, logout_controler, refresh_token_controler}
+
+const get_identification_requests = async (req, res, next) =>  {
+    const user_id = req.params.id;
+       const sqlQuery = `
+        SELECT 
+            ir.*,
+            u.*,
+            o.*,
+            i.*
+        FROM 
+            identification_requests ir
+        JOIN 
+            users u ON ir.user_id = u.user_id
+            JOIN 
+            issuing_organizations o ON ir.org_id = o.org_id
+        JOIN 
+            identifications i ON ir.cert_id = i.cert_id
+        WHERE 
+            ir.user_id = $1
+    `;
+
+    try {
+        await pool.query(sqlQuery, [user_id])
+        .then(ids =>  {
+            res.status(200).json({
+                data: ids.rows,
+                success:true
+            })
+        })
+    } catch (error) {
+        res.status(401).json({error:error.message})
+    }
+
+}
+
+const update_user = async (req, res) => {
+    const { user_id } = req.params;
+    const { email, phone } = req.body;
+  
+    try {
+      const query = `
+        UPDATE users
+        SET
+          email = COALESCE($1, email),
+          phone = COALESCE($2, phone),
+        WHERE user_id = $6
+        RETURNING *;
+      `;
+  
+      const values = [email, phone, user_id];
+  
+      const result = await pool.query(query, values);
+  
+      if (result.rows.length === 0) {
+        return res.status(404).send('User not found');
+      }
+  
+      res.status(200).json(result.rows[0]);
+    } catch (err) {
+      console.error('Error updating user:', err);
+      res.status(500).send('Server error');
+    }
+  };
+  
+ 
+  const update_user_profile = async (req, res) => {
+    const { user_id } = req.params;
+    const image = req.files[0]
+     const  profile = image.path
+  
+    if (!profile) {
+      return res.status(400).send('Profile URL is required');
+    }
+  
+    try {
+      const query = `
+        UPDATE users
+        SET profile = $1
+        WHERE user_id = $2
+        RETURNING *;
+      `;
+  
+      const values = [profile, user_id];
+  
+      const result = await pool.query(query, values);
+  
+      if (result.rows.length === 0) {
+        return res.status(404).send('User not found');
+      }
+  
+      res.status(200).json(result.rows[0]);
+    } catch (err) {
+      console.error('Error updating user profile:', err);
+      res.status(500).send('Server error');
+    }
+  };
+  
+  const change_user_password = async (req, res) => {
+    const { user_id } = req.params;
+    const { old_password, new_password } = req.body;
+  
+    if (!old_password || !new_password) {
+      return res.status(400).send('Old and new passwords are required');
+    }
+  
+    try {
+      const getPasswordQuery = 'SELECT password FROM users WHERE user_id = $1';
+      const passwordResult = await pool.query(getPasswordQuery, [user_id]);
+  
+      if (passwordResult.rows.length === 0) {
+        return res.status(404).send('User not found');
+      }
+  
+      const currentPasswordHash = passwordResult.rows[0].password;
+
+      const isMatch = await bcrypt.compare(old_password, currentPasswordHash);
+      if (!isMatch) {
+        return res.status(401).send('Old password is incorrect');
+      }
+  
+
+      const newPasswordHash = await bcrypt.hash(new_password, 10);
+  
+      const updatePasswordQuery = `
+        UPDATE users
+        SET password = $1
+        WHERE user_id = $2
+        RETURNING *;
+      `;
+      const updatePasswordResult = await pool.query(updatePasswordQuery, [newPasswordHash, user_id]);
+  
+      res.status(200).json(updatePasswordResult.rows[0]);
+    } catch (err) {
+      console.error('Error changing password:', err);
+      res.status(500).send('Server error');
+    }
+  };
+
+
+ 
+module.exports = {verfy_otp,user_verify_email,register_controler, login_controler, logout_controler, refresh_token_controler, get_identification_requests, change_user_password, update_user, update_user_profile}

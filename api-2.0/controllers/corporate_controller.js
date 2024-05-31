@@ -82,9 +82,9 @@ const login_controler = (req, res, next) => {
             .then(async doMatch => {
                if (doMatch) {
                 const otp = Math.floor(Math.random() * 10000);
-
-                const ress = await sendMail('JAMIIPASS LOGIN ONE TIME PASSWORD', `TO login enter this otp: ${otp}`, corp.rows[0].email);
-                if (ress) {
+                console.log("----------------corpOtp", otp);
+                // const ress = await sendMail('JAMIIPASS LOGIN ONE TIME PASSWORD', `TO login enter this otp: ${otp}`, corp.rows[0].email);
+                if (otp) {
                     await pool.query('INSERT INTO corp_otps (corp_id, otp) VALUES($1,$2) RETURNING *',
                     [corp.rows[0].corp_id, otp])
                     .then(dat => {
@@ -113,12 +113,13 @@ const login_controler = (req, res, next) => {
 
 const verfy_otp =async (req, res, next) => {
    const corp_id  = req.body.corp_id;
-   const otp = req.body.otp
+   const otp = req.body.otp;
+   console.log(otp);
    
    await pool.query('SELECT * FROM corp_otps WHERE corp_id=$1', [corp_id])
    .then(
    async corp_otp => {
-    if (corp_otp.rows[0].otp === otp) {
+    if (corp_otp.rows[0]?.otp === otp) {
         await pool.query('SELECT * FROM corporates WHERE corp_id=$1', [corp_id])
         .then(
             corp => {
@@ -215,6 +216,108 @@ const get_corp_info = async (req, res, next) => {
 
     }
 }
+
+const update_corporate = async (req, res) => {
+    const { corp_id } = req.params;
+    const { corp_name, email, phone } = req.body;
+  
+    try {
+      const query = `
+        UPDATE corporates
+        SET
+          corp_name = COALESCE($1, corp_name),
+          email = COALESCE($2, email),
+          phone = COALESCE($3, phone),
+        WHERE corp_id = $6
+        RETURNING *;
+      `;
+  
+      const values = [corp_name, email, phone, corp_id];
+  
+      const result = await pool.query(query, values);
+  
+      if (result.rows.length === 0) {
+        return res.status(404).send('Corporate not found');
+      }
+  
+      res.status(200).json(result.rows[0]);
+    } catch (err) {
+      console.error('Error updating corporate:', err);
+      res.status(500).send('Server error');
+    }
+  };
+
+const change_corporate_password = async (req, res) => {
+    const { corp_id } = req.params;
+    const { old_password, new_password } = req.body;
+  
+    if (!old_password || !new_password) {
+      return res.status(400).send('Old and new passwords are required');
+    }
+  
+    try {
+      const getPasswordQuery = 'SELECT password FROM corporates WHERE corp_id = $1';
+      const passwordResult = await pool.query(getPasswordQuery, [corp_id]);
+  
+      if (passwordResult.rows.length === 0) {
+        return res.status(404).send('Corporate not found');
+      }
+  
+      const currentPasswordHash = passwordResult.rows[0].password;
+  
+      const isMatch = await bcrypt.compare(old_password, currentPasswordHash);
+      if (!isMatch) {
+        return res.status(401).send('Old password is incorrect');
+      }
+  
+      const newPasswordHash = await bcrypt.hash(new_password, 10);
+  
+      const updatePasswordQuery = `
+        UPDATE corporates
+        SET password = $1
+        WHERE corp_id = $2
+        RETURNING *;
+      `;
+      const updatePasswordResult = await pool.query(updatePasswordQuery, [newPasswordHash, corp_id]);
+  
+      res.status(200).json(updatePasswordResult.rows[0]);
+    } catch (err) {
+      console.error('Error changing password:', err);
+      res.status(500).send('Server error');
+    }
+  };
+
+  const update_corporate_pic = async (req, res) => {
+    const { corp_id } = req.params;
+    const image = req.files[0]
+     const  pic = image.path
+  
+    if (!pic) {
+      return res.status(400).send('Picture URL is required');
+    }
+  
+    try {
+      const query = `
+        UPDATE corporates
+        SET pic = $1
+        WHERE corp_id = $2
+        RETURNING *;
+      `;
+  
+      const values = [pic, corp_id];
+  
+      const result = await pool.query(query, values);
+  
+      if (result.rows.length === 0) {
+        return res.status(404).send('Corporate not found');
+      }
+  
+      res.status(200).json(result.rows[0]);
+    } catch (err) {
+      console.error('Error updating corporate picture:', err);
+      res.status(500).send('Server error');
+    }
+  };
 
 const create_identity_share = async (req, res, next) =>{
     const user_id = req.body.user_id
@@ -316,4 +419,4 @@ const get_corporate_notification = async (req, res, next) => {
 
     }
 }
-module.exports = {corp_identity_shares_history, corp_identity_share, create_identity_share, get_all_corporatess, corp_register_controler, login_controler, logout_controler, refresh_token_controler, verfy_otp, corp_verify_email, get_corp_info, get_corporate_notification}
+module.exports = {corp_identity_shares_history, corp_identity_share, create_identity_share, get_all_corporatess, corp_register_controler, login_controler, logout_controler, refresh_token_controler, verfy_otp, corp_verify_email, get_corp_info, get_corporate_notification, update_corporate, update_corporate_pic,change_corporate_password}

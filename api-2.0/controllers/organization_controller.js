@@ -83,8 +83,8 @@ const login_controler = (req, res, next) => {
                if (doMatch) {
                 const otp = Math.floor(Math.random() * 10000);
 
-                const ress = await sendMail('JAMIIPASS LOGIN ONE TIME PASSWORD', `TO login enter this otp: ${otp}`, org.rows[0].email);
-                if (ress) {
+                // const ress = await sendMail('JAMIIPASS LOGIN ONE TIME PASSWORD', `TO login enter this otp: ${otp}`, org.rows[0].email);
+                if (otp) {
                     await pool.query('INSERT INTO org_otps (org_id, otp) VALUES($1,$2) RETURNING *',
                     [org.rows[0].org_id, otp])
                     .then(dat => {
@@ -218,6 +218,110 @@ const get_org_info = async (req, res, next) => {
     }
 }
 
+const update_organization = async (req, res) => {
+    const { org_id } = req.params;
+    const { org_name, email, phone, } = req.body;
+  
+    try {
+      const query = `
+        UPDATE issuing_organizations
+        SET
+          org_name = COALESCE($1, org_name),
+          email = COALESCE($2, email),
+          phone = COALESCE($4, phone),
+        WHERE org_id = $7
+        RETURNING *;
+      `;
+  
+      const values = [org_name, email, phone, org_id];
+  
+      const result = await pool.query(query, values);
+  
+      if (result.rows.length === 0) {
+        return res.status(404).send('Organization not found');
+      }
+  
+      res.status(200).json(result.rows[0]);
+    } catch (err) {
+      console.error('Error updating organization:', err);
+      res.status(500).send('Server error');
+    }
+  };
+
+const updat_organization_pic = async (req, res) => {
+    const { org_id } = req.params;
+     const image = req.files[0]
+     const  pic = image.path
+
+  
+    if (!pic) {
+      return res.status(400).send('Picture URL is required');
+    }
+  
+    try {
+      const query = `
+        UPDATE issuing_organizations
+        SET pic = $1
+        WHERE org_id = $2
+        RETURNING *;
+      `;
+  
+      const values = [pic, org_id];
+  
+      const result = await pool.query(query, values);
+  
+      if (result.rows.length === 0) {
+        return res.status(404).send('Organization not found');
+      }
+  
+      res.status(200).json(result.rows[0]);
+    } catch (err) {
+      console.error('Error updating organization picture:', err);
+      res.status(500).send('Server error');
+    }
+  };
+
+  const changeOrganizationPassword = async (req, res) => {
+    const { org_id } = req.params;
+    const { old_password, new_password } = req.body;
+  
+    if (!old_password || !new_password) {
+      return res.status(400).send('Old and new passwords are required');
+    }
+  
+    try {
+     
+      const getPasswordQuery = 'SELECT password FROM issuing_organizations WHERE org_id = $1';
+      const passwordResult = await pool.query(getPasswordQuery, [org_id]);
+  
+      if (passwordResult.rows.length === 0) {
+        return res.status(404).send('Organization not found');
+      }
+  
+      const currentPasswordHash = passwordResult.rows[0].password;
+  
+      const isMatch = await bcrypt.compare(old_password, currentPasswordHash);
+      if (!isMatch) {
+        return res.status(401).send('Old password is incorrect');
+      }
+  
+      const newPasswordHash = await bcrypt.hash(new_password, 10);
+  
+      const updatePasswordQuery = `
+        UPDATE issuing_organizations
+        SET password = $1
+        WHERE org_id = $2
+        RETURNING *;
+      `;
+      const updatePasswordResult = await pool.query(updatePasswordQuery, [newPasswordHash, org_id]);
+  
+      res.status(200).json(updatePasswordResult.rows[0]);
+    } catch (err) {
+      console.error('Error changing password:', err);
+      res.status(500).send('Server error');
+    }
+  };
+
 
 const create_identification = async (req, res, next) => {
     const org_id = req.user.org_id;
@@ -277,7 +381,6 @@ const create_identification_request = async (req, res, next) => {
            } 
         )
     } catch (error) {
-        
         res.status(401).json({error:error.message})
     }
 }
@@ -317,7 +420,9 @@ const get_all_identification_requests = async (req, res, next) =>  {
 
 
 const get_identification_request = async (req, res, next) =>  {
+    console.log("------------------------------");
     const request_id = req.params.id;
+    console.log(request_id);
        const sqlQuery = `
         SELECT 
             ir.*,
@@ -336,6 +441,7 @@ const get_identification_request = async (req, res, next) =>  {
     try {
         await pool.query(sqlQuery, [request_id])
         .then(ids =>  {
+            console.log(ids);
             res.status(200).json({
                 data: ids.rows,
                 success:true
@@ -366,5 +472,46 @@ const get_organization_notification = async (req, res, next) => {
     }
 }
 
+const get_organization_identifications = async (req, res, next) => {
+    console.log("------------------------------");
+    const org_id = req.params.id;
+    console.log(org_id);
+    try {
+        await pool.query('SELECT * FROM identifications WHERE org_id=$1', [org_id])
+        .then(corp =>  {
+            console.log(corp);
+            res.status(200).json({
+                data: corp.rows,
+                success:true
+            })
+        })
+    } catch (error) {
+        res.status(401).json({error:error.message})
 
-module.exports = {get_identification_request, get_organization_notification,get_all_identification_requests, get_all_identifications, create_identification_request ,create_identification, get_all_organizations, org_register_controler, login_controler, logout_controler, refresh_token_controler, verfy_otp, org_verify_email, get_org_info}
+    }
+}
+
+const update_user_card_request = async (req, res, next) => {
+    const id = req.body.id;
+    const status= req.body.status;
+
+    const  sqlQuery = ` 
+     UPDATE  identification_requests
+     SET request_state = $1
+     WHERE id = $2
+    `
+    try {
+        await pool.query(sqlQuery, [status,id])
+        .then(ids =>  {
+            res.status(200).json({
+                data: ids.rows,
+                success:true
+            })
+        })
+    } catch (error) {
+        res.status(401).json({error:error.message}) 
+    }
+}
+
+
+module.exports = {update_user_card_request, get_organization_identifications,get_identification_request, get_organization_notification,get_all_identification_requests, get_all_identifications, create_identification_request ,create_identification, get_all_organizations, org_register_controler, login_controler, logout_controler, refresh_token_controler, verfy_otp, org_verify_email, get_org_info, changeOrganizationPassword, updat_organization_pic, update_organization}
