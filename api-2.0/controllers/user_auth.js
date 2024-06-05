@@ -114,7 +114,7 @@ const user_verify_email = async (req, res, next) => {
 }
 
 const verfy_otp =async (req, res, next) => {
-    console.log("-------------------------------------------------------------");
+    console.log("-------------------------------------------------------------",req.body.otp);
     const user_id  = req.body.user_id;
     const otp = req.body.otp
 
@@ -155,6 +155,21 @@ const verfy_otp =async (req, res, next) => {
     )
  
  }
+
+ const get_all_users = async (req, res, next) =>  {
+  try {
+      await pool.query('SELECT * FROM users')
+      .then(orgs =>  {
+          res.status(200).json({
+              data: orgs.rows,
+              success:true
+          })
+      })
+  } catch (error) {
+
+      res.status(401).json({error:error.message})
+  }
+}
 
 const refresh_token_controler = (req, res) => {
 
@@ -329,4 +344,4 @@ const update_user = async (req, res) => {
 
 
  
-module.exports = {verfy_otp,user_verify_email,register_controler, login_controler, logout_controler, refresh_token_controler, get_identification_requests, change_user_password, update_user, update_user_profile}
+module.exports = {get_all_users, verfy_otp,user_verify_email,register_controler, login_controler, logout_controler, refresh_token_controler, get_identification_requests, change_user_password, update_user, update_user_profile}

@@ -46,13 +46,13 @@ const query = async (channelName, chaincodeName, args, fcn, username, org_name) 
 
         switch (fcn) {
             case "GetIdentitiesByOrganization":
-                const arg = org_name === "NIDAOrg"? "NIDA":org_name === "DITOrg"? ["DIT"]:org_name === "NHIFOrg"? ["NHIF"]:org_name === "TRAOrg"?["TRA"]:"RITA"
+                const arg = org_name === "NIDAOrg"? ["NIDA"]:org_name === "DITOrg"? ["DIT"]:org_name === "NHIFOrg"? ["NHIF"]:org_name === "TRAOrg"?["TRA"]:["RITA"];
                 console.log("=============", `${arg}`)
-                result = await contract.evaluateTransaction(fcn, `${arg}`);
+                result = await contract.evaluateTransaction(fcn, arg);
                 break;
-            case "GetIdentityByUserID":
+            case "GetIdentitiesByUserID":
                 console.log("=============")
-                result = await contract.evaluateTransaction(fcn, ["5522hdgghdhdghd5ggg52"]);
+                result = await contract.evaluateTransaction(fcn, args);
                 break;
             case "GetIdentityByTransactionID":
                 console.log("=============GetIdentityByTransactionID")
@@ -61,7 +61,7 @@ const query = async (channelName, chaincodeName, args, fcn, username, org_name) 
                 break;
             case "GetIdentitiesByTransactionIDs":
                 console.log("=============")
-                result = await contract.evaluateTransaction(fcn, args[0]);
+                result = await contract.evaluateTransaction(fcn, args);
                 break;
             case "DeleteIdentityByTransactionID":
                 console.log("=============")
@@ -75,8 +75,7 @@ const query = async (channelName, chaincodeName, args, fcn, username, org_name) 
                 break;
         }
 
-        console.log(result)
-        console.log(`Transaction has been evaluated, result is: ${result.toString()}`);
+        // console.log(`Transaction has been evaluated, result is: ${result.toString()}`);
 
         result = JSON.parse(result.toString());
         return result

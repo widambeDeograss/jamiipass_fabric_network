@@ -65,8 +65,8 @@ presetup() {
 
 CHANNEL_NAME="mychannel"
 CC_RUNTIME_LANGUAGE="golang"
-VERSION="1"
-SEQUENCE=1
+VERSION="5"
+SEQUENCE=5
 CC_SRC_PATH="./artifacts/src/github.com/identities/go"
 CC_NAME="id"
 
@@ -304,7 +304,7 @@ chaincodeInvoke() {
         --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_NIDA_CA \
         --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_DIT_CA \
          --peerAddresses localhost:11051 --tlsRootCertFiles $PEER0_NHIF_CA \
-        -c '{"function": "CreateIdentity", "Args":["1", "5522552", "160013830jhghvhjdksghgkjhakgasdhds9939", "45545665","Widambe","NIDA","2024-03-23","true"]}'
+        -c '{"function": "CreateIdentity", "Args":["16699976", "559927hhhh2552", "160013830jhghvhjdksghgkjhakjhvjhvgasdhds9939", "455456kkkk65","Widambe","NIDA","2024-03-23","true"]}'
 
 }
 
@@ -330,7 +330,7 @@ chaincodeInvokeDeleteAsset() {
 chaincodeQuery() {
     setGlobalsForPeer0Nida
     # setGlobalsForOrg1
-    peer chaincode query -C $CHANNEL_NAME -n ${CC_NAME} -c '{"function": "GetIdentityByUserID","Args":["5522552"]}'
+    peer chaincode query -C $CHANNEL_NAME -n ${CC_NAME} -c '{"function": "GetIdentitiesByUserID","Args":["5522552"]}'
 }
 
 # chaincodeQuery
@@ -353,8 +353,8 @@ chaincodeQuery() {
 # checkCommitReadyness
 # commitChaincodeDefination
 # queryCommitted
-# chaincodeInvokeInit
-# sleep 5
-# chaincodeInvoke
+chaincodeInvokeInit
+sleep 5
+chaincodeInvoke
 sleep 3
 chaincodeQuery

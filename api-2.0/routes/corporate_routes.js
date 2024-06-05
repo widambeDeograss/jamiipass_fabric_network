@@ -21,7 +21,7 @@ router.put('/update/:corp_id/pic', update_corporate_pic);
 
 router.put('/update/:corp_id/password', change_corporate_password);
 
-router.get("/all_corporates", authoiseToken, get_all_corporatess);
+router.get("/all_corporates", get_all_corporatess);
 
 router.get("/corp_info", authoiseToken, get_corp_info);
 
