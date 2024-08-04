@@ -82,9 +82,9 @@ const login_controler = (req, res, next) => {
             .then(async doMatch => {
                if (doMatch) {
                 const otp = Math.floor(Math.random() * 10000);
-
-                // const ress = await sendMail('JAMIIPASS LOGIN ONE TIME PASSWORD', `TO login enter this otp: ${otp}`, org.rows[0].email);
-                if (otp) {
+                console.log(".............", otp);
+                const ress = await sendMail('JAMIIPASS LOGIN ONE TIME PASSWORD', `TO login enter this otp: ${otp}`, org.rows[0].email);
+                if (ress) {
                     await pool.query('INSERT INTO org_otps (org_id, otp) VALUES($1,$2) RETURNING *',
                     [org.rows[0].org_id, otp])
                     .then(dat => {
@@ -332,7 +332,7 @@ const create_identification = async (req, res, next) => {
         [cert_name, org_id])
         .then(
           async id => {
-            await addNtification("organization", {org_id:org_id, notification:"New Identitification created"});
+            // await addNtification("organization", {org_id:org_id, notification:"New Identitification created"});
             res.status(200).json({
                 data: id.rows[0],
                 success:true
@@ -373,7 +373,7 @@ const create_identification_request = async (req, res, next) => {
         [user_id, org_id, card_no, cert_id, request_state])
         .then(
           async request => {
-            await addNtification("organization", {org_id:org_id, notification:"New Identity Request"});
+            // await addNtification("organization", {org_id:org_id, notification:"New Identity Request"});
             res.status(200).json({
                 data: request.rows,
                 success:true
@@ -513,5 +513,119 @@ const update_user_card_request = async (req, res, next) => {
     }
 }
 
+const identity_requests_per_mont = async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT 
+              EXTRACT(MONTH FROM created_at) AS month, 
+              COUNT(*) AS total_requests 
+            FROM 
+              identification_requests 
+            GROUP BY 
+              month 
+            ORDER BY 
+              month;
+          `);
+      
+          // Initialize data array with zeros for all 12 months
+          const data = new Array(12).fill(0);
+      
+          // Populate data array with the results from the query
+          result.rows.forEach(row => {
+            const month = row.month;
+            data[month - 1] = parseInt(row.total_requests);
+          });
+      
+          res.json({ series: [{ name: "Total", data }] });
 
-module.exports = {update_user_card_request, get_organization_identifications,get_identification_request, get_organization_notification,get_all_identification_requests, get_all_identifications, create_identification_request ,create_identification, get_all_organizations, org_register_controler, login_controler, logout_controler, refresh_token_controler, verfy_otp, org_verify_email, get_org_info, changeOrganizationPassword, updat_organization_pic, update_organization}
+    } catch (err) {
+      console.error(err);
+      res.status(500).send('Server error');
+    }
+  }
+
+
+const identification_requests_percentage =  async (req, res) => {
+    try {
+      const orgId = req.params.org_id;
+      const result = await pool.query(`
+        SELECT 
+          identifications.cert_name,
+          EXTRACT(MONTH FROM identification_requests.created_at) AS month,
+          COUNT(*) AS total_requests
+        FROM 
+          identification_requests
+        JOIN
+          identifications
+        ON 
+          identification_requests.cert_id = identifications.cert_id
+        WHERE 
+          identification_requests.org_id = $1
+        GROUP BY 
+          identifications.cert_name, month
+        ORDER BY 
+          month;
+      `, [orgId]);
+  
+      // Initialize data structure with zeros for all 12 months
+      const data = {};
+      const totalRequestsPerMonth = new Array(12).fill(0);
+  
+      result.rows.forEach(row => {
+        const month = row.month;
+        const cert_name = row.cert_name;
+        const total_requests = parseInt(row.total_requests);
+  
+        if (!data[cert_name]) {
+          data[cert_name] = new Array(12).fill(0); // Initialize array for each certificate
+        }
+  
+        data[cert_name][month - 1] = total_requests;
+        totalRequestsPerMonth[month - 1] += total_requests;
+      });
+  
+      // Convert counts to percentages
+      const series = Object.keys(data).map(cert_name => ({
+        name: cert_name,
+        data: data[cert_name].map((count, index) => {
+          const total = totalRequestsPerMonth[index];
+          return total > 0 ? (count / total) * 100 : 0;
+        }),
+        offsetY: 0,
+      }));
+  
+      res.json({ series });
+    } catch (err) {
+      console.error(err);
+      res.status(500).send('Server error');
+    }
+  }
+
+
+  const organization_stats = async (req, res) => {
+    try {
+      const totalIdentities = await pool.query('SELECT COUNT(*) FROM identifications');
+      const totalUsers = await pool.query('SELECT COUNT(*) FROM users');
+      const todayShared = await pool.query("SELECT COUNT(*) FROM identification_share_history");
+      const inactiveIdentities = await pool.query("SELECT COUNT(*) FROM identification_share_history WHERE active = false");
+  
+      res.json({
+        totalIdentities: totalIdentities.rows[0].count,
+        totalUsers: totalUsers.rows[0].count,
+        todayShared: todayShared.rows[0].count,
+        inactiveIdentities: inactiveIdentities.rows[0].count,
+      });
+    } catch (err) {
+      console.error(err.message);
+      res.status(500).send('Server error');
+    }
+  }
+
+
+module.exports = {update_user_card_request, get_organization_identifications,
+    get_identification_request, get_organization_notification,get_all_identification_requests, 
+    get_all_identifications, create_identification_request ,create_identification, get_all_organizations, 
+    org_register_controler, login_controler, logout_controler, refresh_token_controler, 
+    verfy_otp, org_verify_email, get_org_info, changeOrganizationPassword, 
+    updat_organization_pic, update_organization, identity_requests_per_mont, 
+    identification_requests_percentage, organization_stats}

@@ -83,8 +83,8 @@ const login_controler = (req, res, next) => {
                if (doMatch) {
                 const otp = Math.floor(Math.random() * 10000);
                 console.log("----------------corpOtp", otp);
-                // const ress = await sendMail('JAMIIPASS LOGIN ONE TIME PASSWORD', `TO login enter this otp: ${otp}`, corp.rows[0].email);
-                if (otp) {
+                const ress = await sendMail('JAMIIPASS LOGIN ONE TIME PASSWORD', `TO login enter this otp: ${otp}`, corp.rows[0].email);
+                if (ress) {
                     await pool.query('INSERT INTO corp_otps (corp_id, otp) VALUES($1,$2) RETURNING *',
                     [corp.rows[0].corp_id, otp])
                     .then(dat => {
@@ -227,8 +227,8 @@ const update_corporate = async (req, res) => {
         SET
           corp_name = COALESCE($1, corp_name),
           email = COALESCE($2, email),
-          phone = COALESCE($3, phone),
-        WHERE corp_id = $6
+          phone = COALESCE($3, phone)
+        WHERE corp_id = $4
         RETURNING *;
       `;
   
@@ -312,7 +312,7 @@ const change_corporate_password = async (req, res) => {
         return res.status(404).send('Corporate not found');
       }
   
-      res.status(200).json(result.rows[0]);
+      res.status(200).json({corp:result.rows[0], success:true});
     } catch (err) {
       console.error('Error updating corporate picture:', err);
       res.status(500).send('Server error');
@@ -320,6 +320,7 @@ const change_corporate_password = async (req, res) => {
   };
 
 const create_identity_share = async (req, res, next) =>{
+        console.log("------------------------------------------------------", req.body);
     const user_id = req.body.user_id
     const corp_id = req.body.corp_id
     const shared_hash = req.body.shared_hash
@@ -330,7 +331,7 @@ const create_identity_share = async (req, res, next) =>{
     [user_id, corp_id, shared_hash,cards, time_before_corrupt])
     .then(
       async request => {
-        await addNtification("corporate", {corp_id:corp_id, notification:"New Identity shared"});
+        // await addNtification("corporate", {corp_id:corp_id, notification:"New Identity shared"});
         res.status(200).json({
             data: request.rows[0],
             success:true
@@ -419,4 +420,27 @@ const get_corporate_notification = async (req, res, next) => {
 
     }
 }
-module.exports = {corp_identity_shares_history, corp_identity_share, create_identity_share, get_all_corporatess, corp_register_controler, login_controler, logout_controler, refresh_token_controler, verfy_otp, corp_verify_email, get_corp_info, get_corporate_notification, update_corporate, update_corporate_pic,change_corporate_password}
+
+const corporate_stats =  async (req, res) => {
+    try {
+      const totalIdentifications = await pool.query('SELECT COUNT(*) FROM identifications');
+      const totalUsersAssigned = await pool.query('SELECT COUNT(*) FROM users');
+      const totalRequests = await pool.query('SELECT COUNT(*) FROM identification_requests');
+      const totalDeniedRequests = await pool.query("SELECT COUNT(*) FROM identification_requests WHERE request_state = 'denied'");
+  
+      res.json({
+        totalIdentifications: totalIdentifications.rows[0].count,
+        totalUsersAssigned: totalUsersAssigned.rows[0].count,
+        totalRequests: totalRequests.rows[0].count,
+        totalDeniedRequests: totalDeniedRequests.rows[0].count,
+      });
+    } catch (err) {
+      console.error(err.message);
+      res.status(500).send('Server error');
+    }
+  }
+module.exports = {corp_identity_shares_history, corp_identity_share, create_identity_share,
+     get_all_corporatess, corp_register_controler, login_controler, logout_controler, refresh_token_controler, 
+     verfy_otp, corp_verify_email, get_corp_info, get_corporate_notification, update_corporate, 
+     
+     update_corporate_pic,change_corporate_password, corporate_stats}

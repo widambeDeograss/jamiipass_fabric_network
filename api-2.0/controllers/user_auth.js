@@ -63,8 +63,8 @@ const login_controler = (req, res, next) => {
                if (doMatch) {
                 const otp = Math.floor(Math.random() * 10000);
                 console.log("------------", otp);
-                // const ress = await sendMail('JAMIIPASS LOGIN ONE TIME PASSWORD', `TO login enter this otp: ${otp}`, org.rows[0].email);
-                if (true) {
+                const ress = await sendMail('JAMIIPASS LOGIN ONE TIME PASSWORD', `TO login enter this otp: ${otp}`, user.rows[0].email);
+                if (ress) {
                     await pool.query('INSERT INTO user_otps (user_id, otp) VALUES($1,$2) RETURNING *',
                     [user.rows[0].user_id, otp])
                     .then(dat => {
@@ -242,14 +242,14 @@ const get_identification_requests = async (req, res, next) =>  {
 const update_user = async (req, res) => {
     const { user_id } = req.params;
     const { email, phone } = req.body;
-  
+    console.log("-----------------------------------------------------------------",req.body);
     try {
       const query = `
         UPDATE users
         SET
           email = COALESCE($1, email),
-          phone = COALESCE($2, phone),
-        WHERE user_id = $6
+          phone = COALESCE($2, phone)
+        WHERE user_id = $3
         RETURNING *;
       `;
   
@@ -271,7 +271,10 @@ const update_user = async (req, res) => {
  
   const update_user_profile = async (req, res) => {
     const { user_id } = req.params;
-    const image = req.files[0]
+    const image = req.files ? req.files[0] : null;
+
+    console.log("----------------------------------------------------------",image);
+    console.log("-------------------------------------------------------------",req.body);
      const  profile = image.path
   
     if (!profile) {
@@ -294,7 +297,7 @@ const update_user = async (req, res) => {
         return res.status(404).send('User not found');
       }
   
-      res.status(200).json(result.rows[0]);
+      res.status(200).json({"user":result.rows[0], "success":true});
     } catch (err) {
       console.error('Error updating user profile:', err);
       res.status(500).send('Server error');
@@ -342,6 +345,97 @@ const update_user = async (req, res) => {
     }
   };
 
+//   SELECT ih.*, u.email, c.*
+// FROM identification_share_history ih
+// JOIN users u ON ih.user_id = u.user_id
+// JOIN corporates c ON ih.corp_id = c.corp_id
+// WHERE ih.user_id = '784e1f62-110b-4bfa-86e6-2e56ee982f47';
+
+
+const user_identity_shares_history = async (req, res, next) => {
+  const user_id = req.user.user_id;
+  console.log(user_id);
+
+  const sqlQuery = `
+  SELECT 
+      ih.*,
+      u.email,
+      c.*
+  FROM  
+      identification_share_history ih
+  JOIN 
+      users u ON ih.user_id = u.user_id
+  JOIN 
+      corporates c ON ih.corp_id = c.corp_id
+  WHERE 
+      ih.user_id = $1
+`;
+  try {
+      await pool.query(sqlQuery, [user_id])
+      .then(corp =>  {
+          res.status(200).json({
+              data: corp.rows,
+              success:true
+          })
+      })
+  } catch (error) {
+      res.status(401).json({error:error.message})
+
+  }
+  
+}
+
+
+const user_home_stats = async (req, res) => {
+  let user_id = req.query.user_id;
+  const sqlQuery = `
+  SELECT count(*) FROM identification_requests WHERE user_id=$1
+  `
+   
+  try {
+
+     await pool.query(sqlQuery, [user_id])
+      .then(stats =>  {
+          res.status(200).json({
+              data: stats.rows,
+              success:true
+          })
+      })
+  } catch (error) {
+    res.status(401).json({error:error.message})
+  }
+}
+
+
+
+const delete_identity_share = async (req, res) => {
+    let user_id = req.query.user_id;
+    let delete_id = req.query.delete_id
+    console.log("-----------------------------------------------------------------",req.body);
+    try {
+      const query = `
+        DELETE FROM 
+        identification_share_history
+        WHERE (corp_id = $1 OR user_share = $1) AND user_id = $2 
+        RETURNING *;
+      `;
+  
+      const values = [delete_id, user_id];
+  
+      const result = await pool.query(query, values);
+      console.log(result);
+  
+    //   if (result.rowCount ) {
+    //     return res.status(404).send('User not found');
+    //   }
+  
+      res.status(200).json({success:true});
+    } catch (err) {
+      console.error('Error updating user:', err);
+      res.status(500).send('Server error');
+    }
+  };
+
 
  
-module.exports = {get_all_users, verfy_otp,user_verify_email,register_controler, login_controler, logout_controler, refresh_token_controler, get_identification_requests, change_user_password, update_user, update_user_profile}
+module.exports = {delete_identity_share,get_all_users, verfy_otp,user_verify_email,register_controler,user_identity_shares_history, login_controler, logout_controler, refresh_token_controler, get_identification_requests, change_user_password, update_user, update_user_profile, user_home_stats}
